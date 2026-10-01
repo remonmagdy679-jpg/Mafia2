@@ -8,7 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
+
 :root{
   --bg:#F2F5F1; --card:#FFFFFF; --ink:#13233A; --muted:#5E6B66; --line:#D8DFD8;
   --grass:#1E6B45; --grass-soft:#E2EFE7; --red:#C8232C; --red-soft:#FBE7E8; --shadow:0 1px 0 rgba(19,35,58,.08);
@@ -107,14 +110,34 @@ h2.view{font-size:17px;margin:18px 2px 12px;font-weight:700}
 
 .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:90%}
 @media (prefers-reduced-motion: no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}} }
+
+.brand .status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.brand .status i{width:8px;height:8px;border-radius:50%;background:var(--grass);display:inline-block}
+.brand .status.off i{background:var(--red)}
+.searchbar{max-width:720px;margin:0 auto;padding:0 16px 10px}
+.searchbar input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit}
+.res .chips{margin-top:4px}
+.chip.red{background:var(--red-soft);color:var(--red);border-color:transparent;font-weight:700}
+.log .row{min-height:48px}
+.log time{font-size:12px;color:var(--muted);direction:ltr;flex:none}
+.tag{font-size:12px;padding:2px 8px;border-radius:8px;font-weight:700;flex:none}
+.tag.sale{background:var(--red-soft);color:var(--red)}
+.tag.in{background:var(--grass-soft);color:var(--grass)}
+.tag.undo{background:var(--line);color:var(--muted)}
+.who{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.who span{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+.sheet textarea.cfg{direction:ltr;font-size:12px;min-height:160px}
+@media print{header.top,.toolbar,.hint,h2.view,#modal{display:none!important}.wrap{padding:0}.qrs{grid-template-columns:repeat(3,1fr)}.qr{break-inside:avoid;border:1px dashed #999}}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <h1>Mafia Shop<small>جرد نواقص التيشيرتات</small></h1>
+    <span class="status" id="status"></span>
   </div>
   <nav class="tabs" id="tabs"></nav>
+  <div class="searchbar" id="searchbar" hidden><input id="q" type="search" placeholder="دوّر على لاعيب أو فريق… (رونالدو، برشلونة، messi)" autocomplete="off"></div>
 </header>
 <main class="wrap" id="app"><p class="hint">جاري التحميل…</p></main>
 <div id="modal"></div>
@@ -2418,58 +2441,83 @@ var qrcode = function() {
 }));
 </script>
 <script>
+/* ============ الإعداد — الصق بيانات Firebase هنا مرة واحدة ============ */
+const FIREBASE_CONFIG = null;   // ← امسح null والصق مكانها الـ { apiKey: ... } اللي Firebase إداهولك
+const SHOP_ID = 'mafia-27019c37be1c';  // كود المحل — كل اللي فاتحين نفس الملف بيشوفوا نفس الجرد
+/* ===================================================================== */
 (function(){
 const SIZES=['5XS','4XS','3XS','2XS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
-const DEFAULT_BASE=location.origin+location.pathname;
+const SEED=[["رونالدو","البرتغال أبيض"],["رونالدو","البرتغال أحمر"],["رونالدو","النصر أصفر"],["رونالدو","النصر كحلي"],["رونالدو","ميكس الأندية"],["ميسي","الأرجنتين أساسي"],["ميسي","الأرجنتين كحلي"],["ميسي","الإنتر بينك"],["ميسي","الإنتر كحلي"],["ميسي","ميكس كل الأندية"],["هالاند","السيتي تركواز"],["هالاند","السيتي كحلي"],["لامين يامال","إسبانيا أحمر"],["لامين يامال","إسبانيا أبيض"],["لامين يامال","برشلونة أساسي"],["لامين يامال","برشلونة بينك"],["لامين يامال","برشلونة تركواز"],["محمد صلاح","مصر أحمر"],["محمد صلاح","مصر أبيض"],["محمد صلاح","ليڤربول أحمر"],["نيمار","البرازيل أصفر"],["نيمار","البرازيل أبيض"],["نيمار","البرازيل المسيح"],["امبابي","فرنسا أزرق"],["امبابي","فرنسا أخضر"],["امبابي","ريال مدريد أبيض"],["موزيالا","ألمانيا أبيض"],["موزيالا","ألمانيا كحلي"],["موزيالا","بايرن أحمر"],["موزيالا","بايرن أبيض"],["ڤيرتس","ألمانيا أبيض"],["ڤيرتس","ألمانيا كحلي"]];
+const ALIAS={'رونالدو':'ronaldo cr7 cristiano','ميسي':'messi leo','هالاند':'haaland','لامين يامال':'lamine yamal','محمد صلاح':'mohamed salah mo','نيمار':'neymar','امبابي':'mbappe','موزيالا':'musiala','ڤيرتس':'wirtz'};
+const TEAMS={'البرتغال':'portugal','النصر':'nassr','الأرجنتين':'argentina','الإنتر':'inter miami','السيتي':'city','إسبانيا':'spain','برشلونة':'barca barcelona','مصر':'egypt','ليڤربول':'liverpool','البرازيل':'brazil','فرنسا':'france','ريال':'real madrid','ألمانيا':'germany','بايرن':'bayern'};
 const COLORS=[['تركواز','#2BB3B1'],['كحلي','#1B2A4E'],['بينك','#F28DB2'],['أحمر','#C8232C'],['احمر','#C8232C'],['أصفر','#F2C230'],['اصفر','#F2C230'],['أبيض','#FFFFFF'],['ابيض','#FFFFFF'],['أزرق','#2F5DB3'],['ازرق','#2F5DB3'],['أخضر','#2E8B57'],['اخضر','#2E8B57'],['أسود','#1A1A1A'],['اسود','#1A1A1A'],['المسيح','#E9D9A8'],['ميكس','conic-gradient(#C8232C 0 25%,#F2C230 0 50%,#2F5DB3 0 75%,#2E8B57 0)']];
 function kitColor(k){for(const [w,c] of COLORS){if(k.includes(w))return c}return '#9AA5A0'}
 
-const S={players:[],missing:{},view:'sizes',size:null,edit:false,db:null,canWrite:true,ready:false,noDb:false,base:DEFAULT_BASE};
-const $app=document.getElementById('app'),$tabs=document.getElementById('tabs'),$modal=document.getElementById('modal');
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const S={players:[],missing:{},logs:[],view:'sizes',size:null,edit:false,ready:false,q:'',me:LS.get('mafiaShop.me')||'',offline:false,error:''};
+const $app=document.getElementById('app'),$tabs=document.getElementById('tabs'),$modal=document.getElementById('modal'),$q=document.getElementById('q'),$sb=document.getElementById('searchbar'),$st=document.getElementById('status');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const dayKey=(d=new Date())=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+/* ---------- search ---------- */
+const norm=s=>String(s||'').toLowerCase().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ڤ/g,'ف').replace(/\s+/g,' ').trim();
+function hay(p){let t=p.player+' '+p.kit+' '+(ALIAS[p.player]||'');for(const k in TEAMS)if(p.kit.includes(k))t+=' '+TEAMS[k];return norm(t)}
+function matches(p){if(!S.q)return true;const h=hay(p);return norm(S.q).split(' ').every(w=>h.includes(w))}
+$q.addEventListener('input',()=>{S.q=$q.value;render(true)});
 
 function detectSize(){
-  const srcs=[location.hash,location.search];try{srcs.push(document.referrer||'')}catch(e){}
+  const srcs=[location.search,location.hash];
   for(const s of srcs){const m=/size=([0-9A-Za-z]+)/.exec(s||'');if(m){const v=m[1].toUpperCase();if(SIZES.includes(v))return v}}
   return null;
 }
 const first=detectSize(); if(first){S.view='size';S.size=first}
 
 function visiblePlayers(size){return S.players.filter(p=>!(p.hiddenSizes||[]).includes(size))}
-function missIn(size){const m=S.missing[size]||{};const ids=new Set(visiblePlayers(size).map(p=>p.id));let t=0;for(const k in m){if(ids.has(k))t+=m[k]}return t}
+function missIn(size){const m=S.missing[size]||{};const ids=new Set(visiblePlayers(size).map(p=>p.id));let t=0;for(const k in m){if(ids.has(k)&&m[k]>0)t+=m[k]}return t}
 function totalMiss(){return SIZES.reduce((a,s)=>a+missIn(s),0)}
+function cnt(size,id){return Math.max(0,(S.missing[size]||{})[id]||0)}
 function groupByPlayer(list){const g=[];const idx={};for(const p of list){if(!(p.player in idx)){idx[p.player]=g.length;g.push({name:p.player,items:[]})}g[idx[p.player]].items.push(p)}return g}
-
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 
 /* ---------- rendering ---------- */
 function renderTabs(){
   const n=totalMiss();
-  const tabs=[['sizes','المقاسات'],['short','النواقص'+(n?`<span class="pill">${n}</span>`:'')],['players','اللاعيبة'],['qr','QR']];
+  const tabs=[['sizes','المقاسات'],['short','النواقص'+(n?`<span class="pill">${n}</span>`:'')],['log','السجل'],['players','اللاعيبة'],['qr','QR']];
   const active=S.view==='size'?'sizes':S.view==='shortsize'?'short':S.view;
-  $tabs.innerHTML=tabs.map(([k,l])=>`<button data-tab="${k}" ${active===k?'aria-current="page"':''}>${l}</button>`).join('');
+  $tabs.innerHTML=S.view==='setup'?'':tabs.map(([k,l])=>`<button data-tab="${k}" ${active===k?'aria-current="page"':''}>${l}</button>`).join('');
+  $sb.hidden=!S.ready||['qr','setup','short'].includes(S.view);
+  $st.className='status'+(S.offline?' off':'');
+  $st.innerHTML=S.ready?`<i></i>${S.offline?'مش متصل':'متزامن'}`:'';
 }
 function render(){
   renderTabs();
-  if(S.noDb){$app.innerHTML=`<div class="notice">البيانات مش متاحة هنا. افتح الموقع من لينك Claude وانت عامل تسجيل دخول عشان الجرد يتحفظ ويتزامن بين الموبايلات.</div>`;return}
+  if(S.view==='setup')return vSetup();
+  if(S.error){$app.innerHTML=`<div class="notice">${S.error}</div>`;return}
   if(!S.ready){$app.innerHTML='<p class="hint">جاري التحميل…</p>';return}
-  ({sizes:vSizes,size:vSize,short:vShort,shortsize:vShortSize,players:vPlayers,qr:vQR})[S.view]();
+  ({sizes:vSizes,size:vSize,short:vShort,shortsize:vShortSize,players:vPlayers,qr:vQR,log:vLog})[S.view]();
 }
 function vSizes(){
+  if(S.q){
+    const res=S.players.filter(matches);
+    let h=`<h2 class="view">نتايج البحث (${res.length})</h2>`;
+    if(!res.length)h+=`<div class="empty">مفيش لاعيب بالاسم ده.</div>`;
+    else h+=`<div class="rows res">${res.map(p=>{const ms=SIZES.filter(s=>!(p.hiddenSizes||[]).includes(s)&&cnt(s,p.id));return `<div class="row"><span class="dot" style="background:${kitColor(p.kit)}"></span><div class="kit"><b>${esc(p.player)} — ${esc(p.kit)}</b>${ms.length?`<div class="chips">${ms.map(s=>`<button class="chip red" data-short="${s}">${s} × ${cnt(s,p.id)}</button>`).join('')}</div>`:`<span class="hint" style="margin:0">مفيش نواقص</span>`}</div></div>`}).join('')}</div>`;
+    $app.innerHTML=h;return;
+  }
   $app.innerHTML=`<h2 class="view">اختار المقاس</h2><div class="sizes">${SIZES.map(s=>{const n=missIn(s);return `<button class="jersey ${n?'has':''}" data-open="${s}"><span class="num">${s}</span><span class="sub">${n?`ناقص ${n}`:`${visiblePlayers(s).length} موديل`}</span></button>`}).join('')}</div>`;
 }
 function vSize(){
-  const s=S.size,list=visiblePlayers(s),n=missIn(s),m=S.missing[s]||{};
-  let h=`<div class="sizehead"><button class="back" data-go="sizes">رجوع</button><span class="bignum">${s}</span><span class="meta">${list.length} موديل${n?` · ناقص ${n}`:''}</span></div>`;
-  if(S.canWrite)h+=`<div class="toolbar"><button class="btn ${S.edit?'on':''}" data-act="toggle-edit">${S.edit?'خلصت تعديل':'تعديل اللاعيبة'}</button>${S.edit?`<button class="btn primary" data-act="add">إضافة لاعيب</button>`:''}</div>`;
-  if(!list.length)h+=`<div class="empty">مفيش لاعيبة في المقاس ده. دوس "تعديل اللاعيبة" وبعدين "إضافة لاعيب".</div>`;
+  const s=S.size,all=visiblePlayers(s),list=all.filter(matches),n=missIn(s);
+  let h=`<div class="sizehead"><button class="back" data-go="sizes">رجوع</button><span class="bignum">${s}</span><span class="meta">${all.length} موديل${n?` · ناقص ${n}`:''}</span></div>`;
+  h+=`<div class="toolbar"><button class="btn ${S.edit?'on':''}" data-act="toggle-edit">${S.edit?'خلصت تعديل':'تعديل اللاعيبة'}</button>${S.edit?`<button class="btn primary" data-act="add">إضافة لاعيب</button>`:''}</div>`;
+  if(!list.length)h+=`<div class="empty">${S.q?'مفيش نتايج في المقاس ده.':'مفيش لاعيبة في المقاس ده. دوس "تعديل اللاعيبة" وبعدين "إضافة لاعيب".'}</div>`;
   for(const g of groupByPlayer(list)){
     h+=`<section class="group"><h3>${esc(g.name)}</h3><div class="rows">`;
     for(const p of g.items){
-      const c=m[p.id]||0;
+      const c=cnt(s,p.id);
       h+=`<div class="row ${c?'missing':''}"><span class="dot" style="background:${kitColor(p.kit)}"></span><div class="kit"><b>${esc(p.kit)}</b>${c?`<span class="miss">ناقص ${c}</span>`:''}</div>`;
-      if(!S.canWrite){}
-      else if(S.edit)h+=`<div class="step"><button class="icon" aria-label="تعديل" data-act="edit" data-id="${p.id}">✎</button><button class="icon" aria-label="حذف" data-act="del" data-id="${p.id}">🗑</button></div>`;
+      if(S.edit)h+=`<div class="step"><button class="icon" aria-label="تعديل" data-act="edit" data-id="${p.id}">✎</button><button class="icon" aria-label="حذف" data-act="del" data-id="${p.id}">🗑</button></div>`;
       else h+=`<div class="step">${c?`<button class="icon" aria-label="تراجع" data-act="minus" data-id="${p.id}">−</button>`:''}<button class="sell" data-act="sell" data-id="${p.id}">اتباع +</button></div>`;
       h+=`</div>`;
     }
@@ -2485,68 +2533,100 @@ function vShort(){
   $app.innerHTML=h;
 }
 function vShortSize(){
-  const s=S.size,m=S.missing[s]||{},items=visiblePlayers(s).filter(p=>m[p.id]);
+  const s=S.size,items=visiblePlayers(s).filter(p=>cnt(s,p.id)).filter(matches);
   let h=`<div class="sizehead"><button class="back" data-go="short">رجوع</button><span class="bignum">${s}</span><span class="meta">نواقص المقاس</span></div>`;
-  if(!items.length){$app.innerHTML=h+`<div class="empty">المقاس ده كامل، مفيش نواقص.</div>`;return}
-  if(S.canWrite)h+=`<div class="toolbar"><button class="btn" data-act="copy-size">نسخ نواقص ${s}</button><button class="btn primary" data-act="restock-size">اتورد كل المقاس</button></div>`;
+  if(!items.length){$app.innerHTML=h+`<div class="empty">${S.q?'مفيش نواقص بالاسم ده هنا.':'المقاس ده كامل، مفيش نواقص.'}</div>`;return}
+  h+=`<div class="toolbar"><button class="btn" data-act="copy-size">نسخ نواقص ${s}</button><button class="btn primary" data-act="restock-size">اتورد كل المقاس</button></div>`;
   for(const g of groupByPlayer(items)){
     h+=`<section class="group"><h3>${esc(g.name)}</h3><div class="rows">`;
     for(const p of g.items){
-      h+=`<div class="row"><span class="dot" style="background:${kitColor(p.kit)}"></span><div class="kit"><b>${esc(p.kit)}</b></div>${S.canWrite?`<div class="step"><button class="icon" aria-label="قلل واحد" data-act="minus" data-id="${p.id}">−</button><span class="count">${m[p.id]}</span><button class="icon" aria-label="زود واحد" data-act="sell" data-id="${p.id}">+</button><button class="btn" data-act="restock" data-id="${p.id}">اتورد</button></div>`:`<span class="count">${m[p.id]}</span>`}</div>`;
+      h+=`<div class="row"><span class="dot" style="background:${kitColor(p.kit)}"></span><div class="kit"><b>${esc(p.kit)}</b></div><div class="step"><button class="icon" aria-label="قلل واحد" data-act="minus" data-id="${p.id}">−</button><span class="count">${cnt(s,p.id)}</span><button class="icon" aria-label="زود واحد" data-act="sell" data-id="${p.id}">+</button><button class="btn" data-act="restock" data-id="${p.id}">اتورد</button></div></div>`;
     }
     h+=`</div></section>`;
   }
   $app.innerHTML=h;
 }
 function vPlayers(){
-  let h=`<h2 class="view">كل اللاعيبة (${S.players.length})</h2><p class="hint">أي لاعيب تضيفه بيتضاف في كل المقاسات. تقدر تشيله من مقاس معين من صفحة المقاس.</p>`;
-  h+=`<div class="toolbar"><button class="btn primary" data-act="add">إضافة لاعيب</button><button class="btn" data-act="export">تنزيل نسخة احتياطية</button><button class="btn" data-act="import">استرجاع نسخة</button></div>`;
-  if(!S.players.length)h+=`<div class="empty">مفيش لاعيبة لسه. ابدأ بـ "إضافة لاعيب".</div>`;
-  for(const g of groupByPlayer(S.players)){
+  const list=S.players.filter(matches);
+  let h=`<h2 class="view">كل اللاعيبة (${S.players.length})</h2><p class="hint">أي لاعيب تضيفه بيتضاف في كل المقاسات وعند كل الموظفين. تقدر تشيله من مقاس معين من صفحة المقاس.</p>`;
+  h+=`<div class="toolbar"><button class="btn primary" data-act="add">إضافة لاعيب</button><button class="btn" data-act="export">تنزيل نسخة احتياطية</button><button class="btn" data-act="import">استرجاع نسخة</button>${LS.get('mafiaShop.v1')?`<button class="btn" data-act="migrate">رفع بيانات النسخة القديمة</button>`:''}</div>`;
+  if(!list.length)h+=`<div class="empty">${S.q?'مفيش لاعيب بالاسم ده.':'مفيش لاعيبة لسه. ابدأ بـ "إضافة لاعيب".'}</div>`;
+  for(const g of groupByPlayer(list)){
     h+=`<section class="group"><h3>${esc(g.name)}</h3><div class="rows">`;
     for(const p of g.items){
       const hid=p.hiddenSizes||[];
-      h+=`<div class="row"><span class="dot" style="background:${kitColor(p.kit)}"></span><div class="kit"><b>${esc(p.kit)}</b>${hid.length?`<span class="hint" style="margin:0">مش موجود في: ${hid.join('، ')}</span>`:''}</div>${S.canWrite?`<div class="step"><button class="icon" aria-label="تعديل" data-act="edit" data-id="${p.id}">✎</button><button class="icon" aria-label="حذف" data-act="del" data-id="${p.id}">🗑</button></div>`:''}</div>`;
+      h+=`<div class="row"><span class="dot" style="background:${kitColor(p.kit)}"></span><div class="kit"><b>${esc(p.kit)}</b>${hid.length?`<span class="hint" style="margin:0">مش موجود في: ${hid.join('، ')}</span>`:''}</div><div class="step"><button class="icon" aria-label="تعديل" data-act="edit" data-id="${p.id}">✎</button><button class="icon" aria-label="حذف" data-act="del" data-id="${p.id}">🗑</button></div></div>`;
     }
     h+=`</div></section>`;
   }
   $app.innerHTML=h;
 }
-function qrUrl(s){const b=(S.base||'').split('#')[0].split('?')[0];return `${b}?size=${s}#size=${s}`}
+const LBL={sale:['اتباع','sale'],undo:['تراجع','undo'],in:['اتورد','in'],add:['لاعيب جديد','in'],del:['اتمسح','undo']};
+function vLog(){
+  const today=dayKey();
+  const todays=S.logs.filter(e=>e.day===today);
+  const per={};for(const e of todays){if(e.a==='sale')per[e.by]=(per[e.by]||0)+(e.n||1);if(e.a==='undo')per[e.by]=(per[e.by]||0)-(e.n||1)}
+  let h=`<div class="sizehead"><span class="meta">اسمك على الجهاز ده: <b style="color:var(--ink)">${esc(S.me||'—')}</b></span><button class="btn" data-act="name">تغيير الاسم</button></div>`;
+  h+=`<h2 class="view">مبيعات النهارده</h2>`;
+  const names=Object.entries(per).filter(([,v])=>v>0);
+  h+=names.length?`<div class="who">${names.map(([n,v])=>`<span>${esc(n)}: ${v} قطعة</span>`).join('')}</div>`:`<p class="hint">لسه مفيش بيع النهارده.</p>`;
+  const list=S.logs.filter(e=>!S.q||norm(e.name+' '+e.by+' '+e.size).includes(norm(S.q)));
+  h+=`<h2 class="view">آخر الحركات</h2>`;
+  if(!list.length){$app.innerHTML=h+`<div class="empty">مفيش حركات.</div>`;return}
+  let day='';
+  for(const e of list.slice(0,300)){
+    if(e.day!==day){if(day)h+=`</div>`;day=e.day;h+=`<h3 class="hint" style="margin-top:16px">${e.day===today?'النهارده':esc(e.day)}</h3><div class="rows log">`}
+    const [l,c]=LBL[e.a]||[e.a,'undo'];const d=new Date(e.t);
+    h+=`<div class="row"><span class="tag ${c}">${l}${e.n>1?' '+e.n:''}</span><div class="kit"><b>${esc(e.name)}${e.size?` <span style="direction:ltr;display:inline-block">· ${esc(e.size)}</span>`:''}</b><span class="hint" style="margin:0">${esc(e.by||'')}</span></div><time>${pad(d.getHours())}:${pad(d.getMinutes())}</time></div>`;
+  }
+  $app.innerHTML=h+`</div>`;
+}
+function qrUrl(s){return `${location.origin}${location.pathname}?size=${s}`}
 function vQR(){
-  let h=`<h2 class="view">QR لكل مقاس</h2><p class="hint">امسح الكود بكاميرا الموبايل يفتحلك لاعيبة المقاس ده على طول. اطبعهم والزق كل واحد على رف المقاس بتاعه.</p>`;
-  if(!S.base){h+=`<div class="notice">حط لينك الموقع الأول عشان الأكواد تتعمل.</div>`}
-  else h+=`<div class="qrs">${SIZES.map(s=>{let svg='';try{const q=qrcode(0,'M');q.addData(qrUrl(s));q.make();svg=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){svg='<p>خطأ في الكود</p>'}return `<div class="qr">${svg}<span>${s}</span></div>`}).join('')}</div>`;
-  if(S.canWrite)h+=`<h2 class="view">لينك الموقع</h2><p class="hint">بيتحط تلقائي من لينك الصفحة. غيّره بس لو نقلت الموقع لمكان تاني.</p><div class="field"><input id="baseInput" value="${esc(S.base)}" placeholder="https://claude.ai/..."><button class="btn primary" data-act="save-base">حفظ</button></div>`;
+  let h=`<h2 class="view">QR لكل مقاس</h2><p class="hint">امسح الكود بكاميرا الموبايل يفتحلك لاعيبة المقاس ده على طول. اطبعهم والزق كل واحد على رف المقاس بتاعه.</p><div class="toolbar"><button class="btn primary" data-act="print">طباعة الأكواد</button></div>`;
+  h+=`<div class="qrs">${SIZES.map(s=>{let svg='';try{const q=qrcode(0,'M');q.addData(qrUrl(s));q.make();svg=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){svg='<p>خطأ في الكود</p>'}return `<div class="qr">${svg}<span>${s}</span></div>`}).join('')}</div>`;
   $app.innerHTML=h;
+}
+function vSetup(){
+  $app.innerHTML=`<h2 class="view">ربط الموقع بقاعدة البيانات</h2>
+  <p class="hint">الموقع محتاج Firebase عشان كل الموظفين يشوفوا نفس الجرد. الصق هنا الكود اللي Firebase إداهولك (اللي فيه apiKey و projectId).</p>
+  <textarea class="cfg" id="cfgText" style="width:100%;min-height:180px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card);color:var(--ink);direction:ltr;font-size:12px" placeholder="const firebaseConfig = { apiKey: ..., projectId: ... }"></textarea>
+  <div class="toolbar"><button class="btn primary" data-act="save-cfg">ربط</button></div>
+  <p class="hint">بعد ما يشتغل، الصق نفس الكود في ملف index.html مكان FIREBASE_CONFIG عشان باقي الموظفين ميحتاجوش يعملوا الخطوة دي.</p>`;
 }
 
 /* ---------- modal ---------- */
-function openSheet(html,onClick){
-  $modal.innerHTML=`<div class="scrim" data-close="1"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+function openSheet(html,onClick,dismissable=true){
+  $modal.innerHTML=`<div class="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
   const scrim=$modal.firstChild;
-  scrim.addEventListener('click',e=>{if(e.target===scrim||e.target.closest('[data-cancel]')){closeSheet();return}const b=e.target.closest('[data-m]');if(b)onClick(b.dataset.m,scrim)});
-  const f=scrim.querySelector('input,textarea');if(f)setTimeout(()=>f.focus(),60);
+  scrim.addEventListener('click',e=>{if((dismissable&&e.target===scrim)||e.target.closest('[data-cancel]')){closeSheet();return}const b=e.target.closest('[data-m]');if(b)onClick(b.dataset.m,scrim)});
+  const f=scrim.querySelector('input');if(f)setTimeout(()=>f.focus(),60);
 }
 function closeSheet(){$modal.innerHTML=''}
-
+function askName(force){
+  openSheet(`<h4>اسمك إيه؟</h4><p class="hint" style="margin-top:0">بيظهر في السجل جنب كل بيعة أو توريد تعملها من الجهاز ده.</p><input id="fMe" value="${esc(S.me)}" placeholder="مثلاً: رامون"><div class="actions">${force?'':'<button class="btn" data-cancel>إلغاء</button>'}<button class="btn primary" data-m="ok">حفظ</button></div>`,
+  (m,root)=>{const v=root.querySelector('#fMe').value.trim();if(!v){toast('اكتب اسمك');return}S.me=v;LS.set('mafiaShop.me',v);closeSheet();render()},!force);
+}
 function playerForm(p){
   const names=[...new Set(S.players.map(x=>x.player))];
+  const hs=p?.hiddenSizes||[];
   openSheet(`<h4>${p?'تعديل لاعيب':'إضافة لاعيب'}</h4>
     <label for="fName">اسم اللاعيب</label><input id="fName" list="plist" value="${esc(p?.player||'')}" placeholder="مثلاً: رونالدو">
     <datalist id="plist">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
     <label for="fKit">الفريق واللون</label><input id="fKit" value="${esc(p?.kit||'')}" placeholder="مثلاً: البرتغال أبيض">
+    ${hs.length?`<label>مشيلينه من المقاسات دي (دوس على مقاس عشان ترجعه):</label><div class="chips">${hs.map(s=>`<button class="chip" data-m="restore:${s}">${s} ↺</button>`).join('')}</div>`:''}
     <div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="save">${p?'حفظ التعديل':'إضافة'}</button></div>`,
-  async (m,root)=>{
+  (m,root)=>{
+    if(m.startsWith('restore:')){const s=m.split(':')[1];closeSheet();run(ref('players/'+p.id).update({hiddenSizes:FV().arrayRemove(s)}),`رجع في ${s}`);return}
     const name=root.querySelector('#fName').value.trim(),kit=root.querySelector('#fKit').value.trim();
     if(!name||!kit){toast('اكتب اسم اللاعيب والفريق واللون');return}
     closeSheet();
-    if(p){await write(()=>S.db.doc('players/'+p.id).set({...clone(p),player:name,kit}),'اتعدل')}
+    if(p){run(ref('players/'+p.id).update({player:name,kit}),'اتعدل')}
     else{
       const same=S.players.filter(x=>x.player===name);
       const order=same.length?Math.max(...same.map(x=>x.order||0))+0.01:(Math.max(0,...S.players.map(x=>x.order||0))+1);
-      const id='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-      await write(()=>S.db.doc('players/'+id).set({player:name,kit,order,hiddenSizes:[]}),'اتضاف في كل المقاسات');
+      run(col('players').add({player:name,kit,order,hiddenSizes:[]}),'اتضاف في كل المقاسات');
+      log('add','',{player:name,kit},1);
     }
   });
 }
@@ -2558,24 +2638,10 @@ function delForm(p){
       <button class="btn danger" data-m="all">امسحه من كل المقاسات</button>
       <button class="btn" data-cancel>إلغاء</button>
     </div>`,
-  async m=>{
+  m=>{
     closeSheet();
-    if(m==='one'){const hs=[...new Set([...(p.hiddenSizes||[]),inSize])];await write(()=>S.db.doc('players/'+p.id).set({...clone(p),hiddenSizes:hs}),`اتشال من ${inSize}`)}
-    if(m==='all'){await write(()=>S.db.doc('players/'+p.id).delete(),'اتمسح')}
-  });
-}
-function editPlayerHidden(p){ // restore hidden sizes from players view
-  const hs=p.hiddenSizes||[];
-  openSheet(`<h4>تعديل ${esc(p.player)} — ${esc(p.kit)}</h4>
-    <label for="fName">اسم اللاعيب</label><input id="fName" value="${esc(p.player)}">
-    <label for="fKit">الفريق واللون</label><input id="fKit" value="${esc(p.kit)}">
-    ${hs.length?`<label>مشيلينه من المقاسات دي (دوس على مقاس عشان ترجعه):</label><div class="chips">${hs.map(s=>`<button class="chip" data-m="restore:${s}">${s} ↺</button>`).join('')}</div>`:''}
-    <div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="save">حفظ التعديل</button></div>`,
-  async (m,root)=>{
-    if(m.startsWith('restore:')){const s=m.split(':')[1];closeSheet();await write(()=>S.db.doc('players/'+p.id).set({...clone(p),hiddenSizes:hs.filter(x=>x!==s)}),`رجع في ${s}`);return}
-    const name=root.querySelector('#fName').value.trim(),kit=root.querySelector('#fKit').value.trim();
-    if(!name||!kit){toast('اكتب اسم اللاعيب والفريق واللون');return}
-    closeSheet();await write(()=>S.db.doc('players/'+p.id).set({...clone(p),player:name,kit}),'اتعدل');
+    if(m==='one')run(ref('players/'+p.id).update({hiddenSizes:FV().arrayUnion(inSize)}),`اتشال من ${inSize}`);
+    if(m==='all'){run(ref('players/'+p.id).delete(),'اتمسح');log('del','',p,1)}
   });
 }
 function textSheet(title,text){
@@ -2589,26 +2655,63 @@ function textSheet(title,text){
 function shortText(sizes){
   let out='نواقص Mafia Shop\n';
   for(const s of sizes){
-    const m=S.missing[s]||{},items=visiblePlayers(s).filter(p=>m[p.id]);if(!items.length)continue;
-    out+=`\nمقاس ${s}:\n`+items.map(p=>`- ${p.player} ${p.kit} × ${m[p.id]}`).join('\n')+'\n';
+    const items=visiblePlayers(s).filter(p=>cnt(s,p.id));if(!items.length)continue;
+    out+=`\nمقاس ${s}:\n`+items.map(p=>`- ${p.player} ${p.kit} × ${cnt(s,p.id)}`).join('\n')+'\n';
   }
   return out.trim();
 }
 
-/* ---------- writes ---------- */
-const clone=p=>({player:p.player,kit:p.kit,order:p.order||0,hiddenSizes:[...(p.hiddenSizes||[])]});
-async function write(fn,okMsg){
-  try{await fn();if(okMsg)toast(okMsg)}
-  catch(e){if(e&&e.code==='invalid_argument'){S.canWrite=false;render();toast('مش مسموحلك تعدل في الجرد ده')}else if(e&&e.code==='unavailable'){try{await new Promise(r=>setTimeout(r,600+Math.random()*600));await fn();if(okMsg)toast(okMsg)}catch(_){toast('النت فصل — جرب تاني')}}else toast('حصل خطأ — جرب تاني')}
+/* ---------- Firebase ---------- */
+let fs=null;
+const FV=()=>firebase.firestore.FieldValue;
+const ref=p=>fs.doc(`shops/${SHOP_ID}/${p}`);
+const col=p=>fs.collection(`shops/${SHOP_ID}/${p}`);
+function run(promise,okMsg){
+  if(okMsg)toast(okMsg);
+  promise.catch(e=>{console.error(e);toast(e&&e.code==='permission-denied'?'Firebase رافض الحفظ — راجع القواعد (Rules)':'محصلش حفظ — جرب تاني')});
 }
-const queues={};
-function flushSize(size){
-  queues[size]=(queues[size]||Promise.resolve()).then(()=>write(()=>S.db.doc('missing/'+size).set({counts:{...(S.missing[size]||{})}})));
+function log(a,size,p,n){
+  const d=new Date();
+  run(ref('log/'+dayKey(d)).set({entries:FV().arrayUnion({t:d.getTime(),by:S.me||'بدون اسم',a,size:size||'',name:`${p.player} ${p.kit}`,n:n||1,r:Math.random().toString(36).slice(2,8)})},{merge:true}));
 }
-function bump(size,id,delta){
-  const cur={...(S.missing[size]||{})};const n=Math.max(0,(cur[id]||0)+delta);
-  if(n)cur[id]=n;else delete cur[id];
-  S.missing[size]=cur;render();flushSize(size);
+function sell(size,p){run(ref('missing/'+size).set({counts:{[p.id]:FV().increment(1)}},{merge:true}));log('sale',size,p,1)}
+function minus(size,p){const c=cnt(size,p.id);if(!c)return;run(ref('missing/'+size).set({counts:{[p.id]:c<=1?FV().delete():FV().increment(-1)}},{merge:true}));log('undo',size,p,1)}
+function restock(size,p){const c=cnt(size,p.id);if(!c)return;run(ref('missing/'+size).set({counts:{[p.id]:FV().delete()}},{merge:true}),'اتورد');log('in',size,p,c)}
+function restockSize(size){
+  const items=visiblePlayers(size).filter(p=>cnt(size,p.id));const total=items.reduce((a,p)=>a+cnt(size,p.id),0);
+  run(ref('missing/'+size).set({counts:{}}),'المقاس بقى كامل');
+  log('in',size,{player:'كل نواقص',kit:'المقاس'},total);
+}
+async function seedIfEmpty(){
+  try{await fs.runTransaction(async tx=>{
+    const s=await tx.get(ref('settings/app'));if(s.exists&&s.data().seeded)return;
+    tx.set(ref('settings/app'),{seeded:true},{merge:true});
+    SEED.forEach(([a,b],i)=>tx.set(ref('players/p'+pad(i+1)),{player:a,kit:b,order:i+1,hiddenSizes:[]}));
+  })}catch(e){console.error(e)}
+}
+async function importObj(d){
+  if(!d||!d.players)throw new Error('bad');
+  const b=fs.batch();
+  for(const id in d.players)b.set(ref('players/'+id),d.players[id]);
+  for(const s in (d.missing||{}))b.set(ref('missing/'+s),{counts:{...((d.missing[s]||{}).counts||{})}});
+  b.set(ref('settings/app'),{seeded:true},{merge:true});
+  await b.commit();
+}
+function exportData(){
+  const players={};S.players.forEach(p=>{const {id,...r}=p;players[id]=r});
+  const missing={};for(const s in S.missing)missing[s]={counts:S.missing[s]};
+  const blob=new Blob([JSON.stringify({players,missing},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mafia-shop-backup-'+dayKey()+'.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function importData(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
+  inp.onchange=async()=>{try{await importObj(JSON.parse(await inp.files[0].text()));toast('النسخة اترفعت لكل الموظفين')}catch(e){toast('الملف ده مش نسخة احتياطية صحيحة')}};
+  inp.click();
+}
+function parseCfg(t){
+  const o={};for(const k of ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId']){const m=new RegExp(k+'["\']?\\s*:\\s*["\']([^"\']+)["\']').exec(t||'');if(m)o[k]=m[1]}
+  return o.apiKey&&o.projectId?o:null;
 }
 
 /* ---------- events ---------- */
@@ -2621,48 +2724,49 @@ $app.addEventListener('click',e=>{
   const act=b.dataset.act,p=S.players.find(x=>x.id===b.dataset.id);
   if(act==='toggle-edit'){S.edit=!S.edit;render()}
   else if(act==='add')playerForm(null);
-  else if(act==='edit'&&p)(S.view==='players'?editPlayerHidden:playerForm)(p);
+  else if(act==='edit'&&p)playerForm(p);
   else if(act==='del'&&p)delForm(p);
-  else if(act==='sell'&&p){bump(S.size,p.id,1);if(S.view==='size')toast(`${p.player} ${p.kit} اتضاف للنواقص`)}
-  else if(act==='minus'&&p)bump(S.size,p.id,-1);
-  else if(act==='restock'&&p)bump(S.size,p.id,-(S.missing[S.size]?.[p.id]||0));
-  else if(act==='restock-size'){openSheet(`<h4>اتورد كل نواقص مقاس ${S.size}؟</h4><div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="ok">أيوه اتورد</button></div>`,m=>{closeSheet();S.missing[S.size]={};render();flushSize(S.size);toast('المقاس بقى كامل')})}
+  else if(act==='sell'&&p){if(!S.me){askName(true);return}sell(S.size,p);if(S.view==='size')toast(`${p.player} ${p.kit} اتضاف للنواقص`)}
+  else if(act==='minus'&&p)minus(S.size,p);
+  else if(act==='restock'&&p)restock(S.size,p);
+  else if(act==='restock-size'){openSheet(`<h4>اتورد كل نواقص مقاس ${S.size}؟</h4><div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="ok">أيوه اتورد</button></div>`,()=>{closeSheet();restockSize(S.size)})}
   else if(act==='copy-all')textSheet('كل النواقص',shortText(SIZES));
   else if(act==='copy-size')textSheet(`نواقص ${S.size}`,shortText([S.size]));
   else if(act==='export')exportData();
   else if(act==='import')importData();
-  else if(act==='save-base'){const v=document.getElementById('baseInput').value.trim();write(()=>S.db.doc('settings/app').set({baseUrl:v}),'اللينك اتحفظ')}
+  else if(act==='migrate'){openSheet(`<h4>رفع بيانات النسخة القديمة؟</h4><p class="hint" style="margin-top:0">اللاعيبة والنواقص اللي كانت متسجلة على الجهاز ده بس هتترفع وتظهر عند الكل، وهتحل مكان الموجود.</p><div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="ok">ارفع</button></div>`,async()=>{closeSheet();try{await importObj(JSON.parse(LS.get('mafiaShop.v1')));LS.del('mafiaShop.v1');toast('اترفعت لكل الموظفين');render()}catch(e){toast('محصلش رفع — جرب تاني')}})}
+  else if(act==='name')askName(false);
+  else if(act==='print')window.print();
+  else if(act==='save-cfg'){const c=parseCfg(document.getElementById('cfgText').value);if(!c){toast('الكود ناقص — لازم يكون فيه apiKey و projectId');return}LS.set('mafiaShop.fb',JSON.stringify(c));location.reload()}
 });
 
-/* ---------- data (saved on this device) ---------- */
-const KEY='mafiaShop.v1';
-const SEED=[["رونالدو","البرتغال أبيض"],["رونالدو","البرتغال أحمر"],["رونالدو","النصر أصفر"],["رونالدو","النصر كحلي"],["رونالدو","ميكس الأندية"],["ميسي","الأرجنتين أساسي"],["ميسي","الأرجنتين كحلي"],["ميسي","الإنتر بينك"],["ميسي","الإنتر كحلي"],["ميسي","ميكس كل الأندية"],["هالاند","السيتي تركواز"],["هالاند","السيتي كحلي"],["لامين يامال","إسبانيا أحمر"],["لامين يامال","إسبانيا أبيض"],["لامين يامال","برشلونة أساسي"],["لامين يامال","برشلونة بينك"],["لامين يامال","برشلونة تركواز"],["محمد صلاح","مصر أحمر"],["محمد صلاح","مصر أبيض"],["محمد صلاح","ليڤربول أحمر"],["نيمار","البرازيل أصفر"],["نيمار","البرازيل أبيض"],["نيمار","البرازيل المسيح"],["امبابي","فرنسا أزرق"],["امبابي","فرنسا أخضر"],["امبابي","ريال مدريد أبيض"],["موزيالا","ألمانيا أبيض"],["موزيالا","ألمانيا كحلي"],["موزيالا","بايرن أحمر"],["موزيالا","بايرن أبيض"],["ڤيرتس","ألمانيا أبيض"],["ڤيرتس","ألمانيا كحلي"]];
-function seedStore(){const p={};SEED.forEach(([a,b],i)=>{p['p'+String(i+1).padStart(2,'0')]={player:a,kit:b,order:i+1,hiddenSizes:[]}});return {players:p,missing:{},settings:{}}}
-let store=null;
-try{store=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
-if(!store||!store.players)store=seedStore();
-store.missing=store.missing||{};store.settings=store.settings||{};
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){toast('المتصفح مش بيحفظ — اقفل وضع التصفح الخفي')}}
-function sync(){
-  S.players=Object.entries(store.players).map(([id,d])=>({id,...d})).sort((a,b)=>(a.order||0)-(b.order||0)||String(a.kit).localeCompare(String(b.kit),'ar'));
-  const m={};for(const k in store.missing)m[k]={...((store.missing[k]||{}).counts||{})};S.missing=m;
-  S.base=(store.settings.app&&store.settings.app.baseUrl)||DEFAULT_BASE;
+/* ---------- start ---------- */
+(function start(){
+  let cfg=FIREBASE_CONFIG;if(!cfg){try{cfg=JSON.parse(LS.get('mafiaShop.fb')||'null')}catch(e){}}
+  if(!cfg){S.view='setup';render();return}
+  if(typeof firebase==='undefined'){S.error='مش قادر أحمّل Firebase — اتأكد إن النت شغال وافتح الصفحة تاني.';render();return}
+  try{firebase.initializeApp(cfg);fs=firebase.firestore();fs.enablePersistence({synchronizeTabs:true}).catch(()=>{})}
+  catch(e){S.error='بيانات Firebase غلط — راجع الكود اللي لصقته.';LS.del('mafiaShop.fb');render();return}
   render();
-}
-S.db={doc(path){const [col,id]=path.split('/');return{
-  async set(d){store[col]=store[col]||{};store[col][id]=JSON.parse(JSON.stringify(d));persist();sync()},
-  async delete(){if(store[col])delete store[col][id];persist();sync()}}}};
-function exportData(){
-  const blob=new Blob([JSON.stringify(store,null,1)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mafia-shop-backup-'+new Date().toISOString().slice(0,10)+'.json';
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-}
-function importData(){
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
-  inp.onchange=async()=>{try{const d=JSON.parse(await inp.files[0].text());if(!d.players)throw 0;store={players:d.players,missing:d.missing||{},settings:d.settings||{}};persist();sync();toast('النسخة اترجعت')}catch(e){toast('الملف ده مش نسخة احتياطية صحيحة')}};
-  inp.click();
-}
-S.ready=true;sync();
+  if(!S.me)askName(true);
+  const fail=e=>{console.error(e);S.error=e&&e.code==='permission-denied'?'Firebase رافض القراية — حط قواعد الـ Rules اللي في الشرح ودوس Publish.':'حصلت مشكلة في الاتصال — افتح الصفحة تاني.';render()};
+  let seeded=false,gotP=false,gotM=false;
+  const ready=()=>{if(gotP&&gotM)S.ready=true;render()};
+  col('players').onSnapshot({includeMetadataChanges:true},snap=>{
+    S.offline=snap.metadata.fromCache;
+    S.players=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0)||String(a.kit).localeCompare(String(b.kit),'ar'));
+    if(snap.empty&&!snap.metadata.fromCache&&!seeded){seeded=true;seedIfEmpty()}
+    gotP=true;ready();
+  },fail);
+  col('missing').onSnapshot(snap=>{
+    const m={};snap.docs.forEach(d=>{m[d.id]={...((d.data()||{}).counts||{})}});S.missing=m;gotM=true;ready();
+  },fail);
+  col('log').orderBy(firebase.firestore.FieldPath.documentId(),'desc').limit(7).onSnapshot(snap=>{
+    const all=[];snap.docs.forEach(d=>((d.data()||{}).entries||[]).forEach(e=>all.push({...e,day:d.id})));
+    all.sort((a,b)=>b.t-a.t);S.logs=all;if(S.view==='log')render();
+  },e=>console.error(e));
+  addEventListener('online',()=>{S.offline=false;renderTabs()});addEventListener('offline',()=>{S.offline=true;renderTabs()});
+})();
 })();
 </script>
 </body>
