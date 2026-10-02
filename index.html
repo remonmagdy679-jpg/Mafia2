@@ -2855,4 +2855,49 @@ $app.addEventListener('click',e=>{
   else if(act==='sell'&&p){if(!S.me){askName(true);return}sell(S.size,p)}
   else if(act==='minus'&&p)minus(S.size,p);
   else if(act==='restock'&&p)restockSheet(S.size,p);
-  else if(act==='restock-size')openSheet(`<h4>اتورد كل نواقص مقاس $
+  else if(act==='restock-size')openSheet(`<h4>اتورد كل نواقص مقاس ${S.size}؟</h4><p class="hint" style="margin-top:0">كل الأصناف الناقصة هتتشال من النواقص، وكمياتها هتتضاف للمخزن.</p><div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="ok">أيوه اتورد</button></div>`,()=>{closeSheet();restockSize(S.size)});
+  else if(act==='stock-item')stockSheet(p||null);
+  else if(act==='st-plus'&&p)adjust(p,{[S.size]:1});
+  else if(act==='st-minus'&&p)adjust(p,{[S.size]:-1});
+  else if(act==='copy-all')textSheet('كل النواقص',shortText(sizes()));
+  else if(act==='copy-size')textSheet(`نواقص ${S.size}`,shortText([S.size]));
+  else if(act==='export')exportData();
+  else if(act==='import')importData();
+  else if(act==='name')askName(false);
+  else if(act==='print')window.print();
+  else if(act==='save-cfg'){const c=parseCfg($('cfgText').value);if(!c){toast('الكود ناقص');return}LS.set('mafiaShop.fb',JSON.stringify(c));location.reload()}
+});
+
+/* ---------- start ---------- */
+(function start(){
+  let cfg=FIREBASE_CONFIG;if(!cfg){try{cfg=JSON.parse(LS.get('mafiaShop.fb')||'null')}catch(e){}}
+  if(!cfg){S.view='setup';render();return}
+  if(typeof firebase==='undefined'){S.error='مش قادر أحمّل Firebase — اتأكد إن النت شغال وافتح الصفحة تاني.';render();return}
+  try{firebase.initializeApp(cfg);fs=firebase.firestore();fs.enablePersistence().catch(()=>{})}
+  catch(e){S.error='بيانات Firebase غلط.';render();return}
+  render();
+  if(!S.me)askName(true);
+  let lastErr='';
+  const fail=e=>{console.error(e);lastErr=(e&&(e.code||e.message))||'';if(e&&e.code==='permission-denied'){S.error='Firebase رافض القراية — راجع القواعد (Rules) ودوس Publish.';render()}};
+  const got={p:0};
+  const ready=()=>{if(got.p&&!S.ready){S.ready=true;S.error=''}render()};
+  col('players').onSnapshot({includeMetadataChanges:true},snap=>{
+    S.offline=snap.metadata.fromCache;
+    S.items=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0)||String(a.kit).localeCompare(String(b.kit),'ar'));
+    if(!got.seedTried&&!snap.metadata.fromCache){got.seedTried=1;seed(S.items,false)}
+    got.p=1;ready();
+  },fail);
+  col('missing').onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{const x=d.data()||{};m[d.id]={counts:{...(x.counts||{})},sales:{...(x.sales||{})}}});S.missing=m;if(S.ready)render()},fail);
+  col('stock').onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{m[d.id]={...((d.data()||{}).counts||{})}});S.stock=m;if(S.ready)render()},fail);
+  col('events').orderBy('t','desc').limit(400).onSnapshot(snap=>{S.events=snap.docs.map(d=>d.data());if(S.view==='log')render()},e=>console.error(e));
+  setTimeout(()=>{if(S.ready||S.error)return;
+    S.error=`الموقع مش قادر يوصل للبيانات.<br><br>1) اقفل أي تاب تاني مفتوح فيه الموقع.<br>2) اتأكد إن النت شغال.<br>3) دوس الزرار تحت.${lastErr?`<br><br><small style="direction:ltr;display:block">${esc(lastErr)}</small>`:''}<div class="toolbar" style="margin-top:14px"><button class="btn primary" onclick="location.reload()">إعادة المحاولة</button><button class="btn" id="hardReset">مسح الكاش وإعادة</button></div>`;
+    render();
+    const hr=document.getElementById('hardReset');if(hr)hr.onclick=async()=>{try{const dbs=indexedDB.databases?await indexedDB.databases():[];dbs.filter(d=>d.name&&d.name.startsWith('firestore')).forEach(d=>indexedDB.deleteDatabase(d.name))}catch(e){}setTimeout(()=>location.reload(),400)};
+  },12000);
+  addEventListener('online',()=>{S.offline=false;renderTop()});addEventListener('offline',()=>{S.offline=true;renderTop()});
+})();
+})();
+</script>
+</body>
+</html>
