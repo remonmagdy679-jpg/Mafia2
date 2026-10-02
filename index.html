@@ -148,6 +148,25 @@ h2.view{font-size:17px;margin:18px 2px 12px;font-weight:700}
 .grouphead{display:flex;align-items:center;justify-content:space-between}
 .grouphead .icon{width:32px;height:32px;font-size:15px}
 .qr small{display:block;font-size:11px;color:#5E6B66}
+.brands{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.brand-card{border:1px solid var(--line);border-top:4px solid var(--grass);background:var(--card);border-radius:14px;padding:12px;text-align:start;box-shadow:var(--shadow);display:block;width:100%}
+.brand-card b{display:block;font-size:17px;font-weight:800}
+.brand-card .sub{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.brand-card .mb,.cell .mb{display:block;font-size:12px;color:var(--red);font-weight:700}
+.dots{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.dots i{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.2)}
+.brandname{font-size:24px;font-weight:800}
+.colorcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px}
+.colorcard .ch{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.colorcard .ch b{flex:1;font-size:16px}
+.cg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.cell{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;background:var(--bg)}
+.cell.miss{background:var(--red-soft);border-color:transparent}
+.cell>b{display:block;direction:ltr;font-size:14px}
+.stp2{display:flex;align-items:center;justify-content:space-between;gap:4px;margin:6px 0}
+.stp2 button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:20px;line-height:1;padding:0}
+.stp2 .qty{flex:1;min-width:24px;font-size:20px}
+.mini{width:100%;border:0;border-radius:8px;background:var(--grass);color:#fff;padding:8px 0;font-size:13px;font-weight:700}
 @media print{header.top,.toolbar,.hint,h2.view,#modal{display:none!important}.wrap{padding:0}.qrs{grid-template-columns:repeat(3,1fr)}.qr{break-inside:avoid;border:1px dashed #999}}
 </style>
 </head>
@@ -2479,7 +2498,7 @@ const FB_SIZES=['5XS','4XS','3XS','2XS','XS','S','M','L','XL','2XL','3XL','4XL',
 const POLO_SIZES=['M','L','XL','2XL','3XL','4XL'];
 const CATS={
   football:{name:'تيشيرتات الكورة',icon:'⚽',sizes:FB_SIZES,group:'اسم اللاعيب',variant:'الفريق واللون',ph1:'مثلاً: رونالدو',ph2:'مثلاً: البرتغال أبيض',groups:'اللاعيبة'},
-  polo:{name:'بولو ماركات',icon:'👕',sizes:POLO_SIZES,group:'الماركة',variant:'اللون',ph1:'مثلاً: لاكوست',ph2:'مثلاً: كحلي',groups:'الماركات'}
+  polo:{name:'بولو ماركات',icon:'👕',sizes:POLO_SIZES,group:'الماركة',variant:'اللون',ph1:'مثلاً: لاكوست',ph2:'مثلاً: كحلي',groups:'الماركات',brandMode:true}
 };
 const SEED=[["رونالدو","البرتغال أبيض"],["رونالدو","البرتغال أحمر"],["رونالدو","النصر أصفر"],["رونالدو","النصر كحلي"],["رونالدو","ميكس الأندية"],["ميسي","الأرجنتين أساسي"],["ميسي","الأرجنتين كحلي"],["ميسي","الإنتر بينك"],["ميسي","الإنتر كحلي"],["ميسي","ميكس كل الأندية"],["هالاند","السيتي تركواز"],["هالاند","السيتي كحلي"],["لامين يامال","إسبانيا أحمر"],["لامين يامال","إسبانيا أبيض"],["لامين يامال","برشلونة أساسي"],["لامين يامال","برشلونة بينك"],["لامين يامال","برشلونة تركواز"],["محمد صلاح","مصر أحمر"],["محمد صلاح","مصر أبيض"],["محمد صلاح","ليڤربول أحمر"],["نيمار","البرازيل أصفر"],["نيمار","البرازيل أبيض"],["نيمار","البرازيل المسيح"],["امبابي","فرنسا أزرق"],["امبابي","فرنسا أخضر"],["امبابي","ريال مدريد أبيض"],["موزيالا","ألمانيا أبيض"],["موزيالا","ألمانيا كحلي"],["موزيالا","بايرن أحمر"],["موزيالا","بايرن أبيض"],["ڤيرتس","ألمانيا أبيض"],["ڤيرتس","ألمانيا كحلي"]];
 const POLO=[
@@ -2503,7 +2522,7 @@ const COLORS=[['تركواز','#2BB3B1'],['كحلي','#1B2A4E'],['بينك','#F2
 function kitColor(k){for(const [w,c] of COLORS){if(String(k).includes(w))return c}return '#9AA5A0'}
 
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-const S={items:[],missing:{},stock:{},events:[],cat:'football',view:'sizes',size:null,edit:false,ready:false,q:'',me:LS.get('mafiaShop.me')||'',offline:false,error:''};
+const S={items:[],missing:{},stock:{},events:[],cat:'football',view:'sizes',size:null,brand:'',edit:false,ready:false,q:'',me:LS.get('mafiaShop.me')||'',offline:false,error:''};
 const $=id=>document.getElementById(id);
 const $app=$('app'),$tabs=$('tabs'),$cats=$('cats'),$modal=$('modal'),$q=$('q'),$sb=$('searchbar'),$st=$('status');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2515,8 +2534,9 @@ function fmtTime(t){const d=new Date(t);const h=d.getHours();const s=`${h%12||12
 /* ---------- link / category ---------- */
 (function(){
   const s=location.search+'&'+location.hash;
-  const c=/cat=(football|polo)/i.exec(s),z=/size=([0-9A-Za-z]+)/.exec(s);
+  const c=/cat=(football|polo)/i.exec(s),z=/size=([0-9A-Za-z]+)/.exec(s),bq=/brand=([^&#]+)/.exec(s);
   let cat=c?c[1].toLowerCase():null,size=z?z[1].toUpperCase():null;
+  if(bq){let nm=bq[1];try{nm=decodeURIComponent(nm.replace(/\+/g,' '))}catch(e){}S.brand=nm;S.view='brand';cat='polo'}
   if(size&&!cat)cat='football';
   S.cat=cat||LS.get('mafiaShop.cat')||'football';if(!CATS[S.cat])S.cat='football';
   if(size&&CATS[S.cat].sizes.includes(size)){S.view='size';S.size=size}
@@ -2542,13 +2562,13 @@ function matches(p){if(!S.q)return true;const h=hay(p);return norm(S.q).split(' 
 $q.addEventListener('input',()=>{S.q=$q.value;render()});
 
 /* ---------- rendering ---------- */
-const PARENT={size:'sizes',shortsize:'short',stocksize:'stock'};
+const PARENT={brand:'sizes',size:'sizes',shortsize:'short',stocksize:'stock'};
 function renderTop(){
   const show=S.ready&&S.view!=='setup';
   $cats.hidden=!show;
   if(show)$cats.innerHTML=Object.entries(CATS).map(([k,c])=>{const n=totalMiss(k);return `<button data-cat="${k}" aria-pressed="${S.cat===k}">${c.icon} ${c.name}${n?`<span class="pill">${n}</span>`:''}</button>`}).join('');
   const n=totalMiss();
-  const tabs=[['sizes','البيع'],['short','النواقص'+(n?`<span class="pill">${n}</span>`:'')],['stock','المخزن'],['log','السجل'],['players','الأصناف'],['qr','QR']];
+  const tabs=[['sizes',C().brandMode?'الماركات':'البيع'],['short','النواقص'+(n?`<span class="pill">${n}</span>`:'')],['stock','المخزن'],['log','السجل'],['players','الأصناف'],['qr','QR']];
   const active=PARENT[S.view]||S.view;
   $tabs.innerHTML=show?tabs.map(([k,l])=>`<button data-tab="${k}" ${active===k?'aria-current="page"':''}>${l}</button>`).join(''):'';
   $sb.hidden=!show||['qr','short'].includes(S.view);
@@ -2560,7 +2580,7 @@ function render(){
   if(S.view==='setup')return vSetup();
   if(S.error){$app.innerHTML=`<div class="notice">${S.error}</div>`;return}
   if(!S.ready){$app.innerHTML='<p class="hint">جاري التحميل…</p>';return}
-  ({sizes:vSizes,size:vSize,short:vShort,shortsize:vShortSize,stock:vStock,stocksize:vStockSize,players:vPlayers,qr:vQR,log:vLog})[S.view]();
+  ({sizes:vSizes,brand:vBrand,size:vSize,short:vShort,shortsize:vShortSize,stock:vStock,stocksize:vStockSize,players:vPlayers,qr:vQR,log:vLog})[S.view]();
 }
 const dot=p=>`<span class="dot" style="background:${kitColor(p.kit)}"></span>`;
 function stockTag(size,id){const n=stk(size,id);return `<span class="stockq ${n===0?'zero':n<=2?'low':''}">${n===0?'خلصان':'متاح '+n}</span>`}
@@ -2572,6 +2592,7 @@ function searchResults(chipFn){
   return h+`<div class="rows res">${res.map(p=>`<div class="row">${dot(p)}<div class="kit"><b>${esc(p.player)} — ${esc(p.kit)}</b>${chipFn(p)}</div></div>`).join('')}</div>`;
 }
 function vSizes(){
+  if(C().brandMode)return vBrands();
   if(S.q){$app.innerHTML=searchResults(p=>{const av=sizes().filter(s=>!(p.hiddenSizes||[]).includes(s));return `<div class="chips">${av.map(s=>{const n=stk(s,p.id),m=cnt(s,p.id);return `<button class="chip ${m?'red':''}" data-open="${s}">${s} · ${n}${m?` · ناقص ${m}`:''}</button>`}).join('')}</div>`});return}
   $app.innerHTML=`<h2 class="view">${C().name} — اختار المقاس</h2><div class="sizes">${sizes().map(s=>{const n=missIn(s);return `<button class="jersey ${n?'has':''}" data-open="${s}"><span class="num">${s}</span><span class="sub">${n?`ناقص ${n}`:`${stockIn(s)} قطعة`}</span></button>`}).join('')}</div>`;
 }
@@ -2588,6 +2609,36 @@ function vSize(){
       if(S.edit)h+=`<div class="step"><button class="icon" aria-label="تعديل" data-act="edit" data-id="${p.id}">✎</button><button class="icon" aria-label="حذف" data-act="del" data-id="${p.id}">🗑</button></div>`;
       else h+=`<div class="step">${c?`<button class="icon" aria-label="تراجع" data-act="minus" data-id="${p.id}">−</button>`:''}<button class="sell" data-act="sell" data-id="${p.id}">اتباع +</button></div>`;
       h+=`</div>`;
+    }
+    h+=`</div></section>`;
+  }
+  $app.innerHTML=h;
+}
+
+function vBrands(){
+  const all=catItems(),names=[...new Set(all.filter(matches).map(p=>p.player))];
+  let h=`<h2 class="view">${C().name} — اختار الماركة</h2><div class="toolbar"><button class="btn primary" data-act="add">إضافة ماركة</button></div>`;
+  if(!names.length)h+=`<div class="empty">${S.q?'مفيش ماركة بالاسم ده.':'مفيش ماركات لسه.'}</div>`;
+  h+=`<div class="brands">${names.map(n=>{
+    const its=all.filter(p=>p.player===n);let st=0,ms=0;
+    its.forEach(p=>sizes().forEach(s=>{if(!(p.hiddenSizes||[]).includes(s)){st+=stk(s,p.id);ms+=cnt(s,p.id)}}));
+    return `<button class="brand-card" data-brand="${esc(n)}"><b>${esc(n)}</b><span class="sub">${its.length} لون · ${st} قطعة</span>${ms?`<span class="mb">ناقص ${ms}</span>`:''}<span class="dots">${its.map(p=>`<i style="background:${kitColor(p.kit)}"></i>`).join('')}</span></button>`}).join('')}</div>`;
+  $app.innerHTML=h;
+}
+function vBrand(){
+  const name=S.brand,all=catItems().filter(p=>p.player===name),list=all.filter(matches);
+  let tot=0,ms=0;all.forEach(p=>sizes().forEach(s=>{if(!(p.hiddenSizes||[]).includes(s)){tot+=stk(s,p.id);ms+=cnt(s,p.id)}}));
+  let h=`<div class="sizehead"><button class="back" data-go="sizes">رجوع</button><span class="brandname">${esc(name)}</span><span class="meta">${all.length} لون · ${tot} قطعة${ms?` · ناقص ${ms}`:''}</span></div>`;
+  h+=`<div class="toolbar"><button class="btn primary" data-act="add-color">إضافة لون</button><button class="btn ${S.edit?'on':''}" data-act="toggle-edit">${S.edit?'خلصت تعديل':'تعديل'}</button>${S.edit?`<button class="btn" data-act="rename" data-name="${esc(name)}">تغيير اسم الماركة</button>`:''}</div>`;
+  if(!all.length)h+=`<div class="empty">الماركة دي مفيهاش ألوان.</div>`;
+  else if(!list.length)h+=`<div class="empty">مفيش لون بالاسم ده.</div>`;
+  for(const p of list){
+    const total=sizes().reduce((a,s)=>(p.hiddenSizes||[]).includes(s)?a:a+stk(s,p.id),0);
+    h+=`<section class="colorcard"><div class="ch">${dot(p)}<b>${esc(p.kit)}</b><span class="stockq">${total} قطعة</span>${S.edit?`<button class="icon" aria-label="تعديل" data-act="edit" data-id="${p.id}">✎</button><button class="icon" aria-label="حذف" data-act="del" data-id="${p.id}">🗑</button>`:''}</div><div class="cg">`;
+    for(const s of sizes()){
+      if((p.hiddenSizes||[]).includes(s))continue;
+      const n=stk(s,p.id),m=cnt(s,p.id);
+      h+=`<div class="cell ${m?'miss':''}"><b>${s}</b><div class="stp2"><button aria-label="نقص" data-act="b-minus" data-id="${p.id}" data-size="${s}">−</button><span class="qty ${n?'':'zero'}">${n}</span><button aria-label="زود" data-act="b-plus" data-id="${p.id}" data-size="${s}">+</button></div><button class="mini" data-act="b-sell" data-id="${p.id}" data-size="${s}">اتباع</button>${m?`<span class="mb">ناقص ${m}</span>`:''}</div>`;
     }
     h+=`</div></section>`;
   }
@@ -2680,9 +2731,12 @@ function vLog(){
   $app.innerHTML=h+`</div>`;
 }
 function qrUrl(s){return `${location.origin}${location.pathname}?cat=${S.cat}&size=${s}`}
+function brandUrl(n){return `${location.origin}${location.pathname}?cat=polo&brand=${encodeURIComponent(n)}`}
 function vQR(){
-  let h=`<h2 class="view">QR — ${C().name}</h2><p class="hint">امسح الكود بكاميرا الموبايل يفتحلك أصناف المقاس ده على طول. اطبعهم والزق كل واحد على رف المقاس بتاعه. بدّل القسم من فوق عشان تطبع أكواد القسم التاني.</p><div class="toolbar"><button class="btn primary" data-act="print">طباعة الأكواد</button></div>`;
-  h+=`<div class="qrs">${sizes().map(s=>{let svg='';try{const q=qrcode(0,'M');q.addData(qrUrl(s));q.make();svg=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){svg='<p>خطأ في الكود</p>'}return `<div class="qr">${svg}<span>${s}</span><small>${C().name}</small></div>`}).join('')}</div>`;
+  const bm=C().brandMode;
+  const entries=bm?[...new Set(catItems().map(p=>p.player))].map(n=>[n,brandUrl(n)]):sizes().map(s=>[s,qrUrl(s)]);
+  let h=`<h2 class="view">QR — ${C().name}</h2><p class="hint">${bm?'كل كود بيفتح صفحة الماركة بكل ألوانها ومقاساتها.':'امسح الكود بكاميرا الموبايل يفتحلك أصناف المقاس ده على طول.'} اطبعهم والزق كل واحد على مكانه. بدّل القسم من فوق عشان تطبع أكواد القسم التاني.</p><div class="toolbar"><button class="btn primary" data-act="print">طباعة الأكواد</button></div>`;
+  h+=`<div class="qrs">${entries.map(([label,url])=>{let svg='';try{const q=qrcode(0,'M');q.addData(url);q.make();svg=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){svg='<p>خطأ في الكود</p>'}return `<div class="qr">${svg}<span${bm?' style="font-size:17px;direction:rtl"':''}>${esc(label)}</span><small>${C().name}</small></div>`}).join('')}</div>`;
   $app.innerHTML=h;
 }
 function vSetup(){
@@ -2702,12 +2756,12 @@ function askName(force){
   openSheet(`<h4>اسمك إيه؟</h4><p class="hint" style="margin-top:0">بيظهر عند كل الموظفين جنب كل بيعة أو توريد تعمله من الجهاز ده.</p><input id="fMe" value="${esc(S.me)}" placeholder="مثلاً: أمجد"><div class="actions">${force?'':'<button class="btn" data-cancel>إلغاء</button>'}<button class="btn primary" data-m="ok">حفظ</button></div>`,
   (m,root)=>{const v=root.querySelector('#fMe').value.trim();if(!v){toast('اكتب اسمك');return}S.me=v;LS.set('mafiaShop.me',v);closeSheet();render()},!force);
 }
-function itemForm(p){
+function itemForm(p,preset){
   const cat=p?catOf(p):S.cat,c=CATS[cat];
   const names=[...new Set(catItems(cat).map(x=>x.player))];
   const hs=p?.hiddenSizes||[];
   openSheet(`<h4>${p?'تعديل صنف':'إضافة صنف'} — ${c.name}</h4>
-    <label for="fName">${c.group}</label><input id="fName" list="plist" value="${esc(p?.player||'')}" placeholder="${c.ph1}">
+    <label for="fName">${c.group}</label><input id="fName" list="plist" value="${esc(p?.player||preset||'')}" placeholder="${c.ph1}">
     <datalist id="plist">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
     <label for="fKit">${c.variant}</label><input id="fKit" value="${esc(p?.kit||'')}" placeholder="${c.ph2}">
     ${hs.length?`<label>مشيلينه من المقاسات دي (دوس على مقاس عشان ترجعه):</label><div class="chips">${hs.map(s=>`<button class="chip" data-m="restore:${s}">${s} ↺</button>`).join('')}</div>`:''}
@@ -2733,7 +2787,7 @@ function delForm(p){
 }
 function renameForm(old){
   openSheet(`<h4>تغيير اسم "${esc(old)}"</h4><label for="fName">الاسم الجديد</label><input id="fName" value="${esc(old)}"><div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="ok">حفظ</button></div>`,
-  (m,root)=>{const v=root.querySelector('#fName').value.trim();if(!v||v===old){closeSheet();return}closeSheet();const b=fs.batch();catItems().filter(x=>x.player===old).forEach(x=>b.update(ref('players/'+x.id),{player:v}));commit(b,'الاسم اتغير')});
+  (m,root)=>{const v=root.querySelector('#fName').value.trim();if(!v||v===old){closeSheet();return}closeSheet();const b=fs.batch();catItems().filter(x=>x.player===old).forEach(x=>b.update(ref('players/'+x.id),{player:v}));if(S.view==='brand'&&S.brand===old)S.brand=v;commit(b,'الاسم اتغير')});
 }
 function stockSheet(p){
   const items=catItems();let cur=p||items[0];if(!cur){toast('مفيش أصناف');return}
@@ -2772,7 +2826,7 @@ function sell(s,p){
   b.set(ref('missing/'+s),{counts:{[p.id]:FV().increment(1)},sales:{[p.id]:FV().arrayUnion(e)}},{merge:true});
   if(had)b.set(ref('stock/'+s),{counts:{[p.id]:FV().increment(-1)}},{merge:true});
   evt(b,'sale',s,p,1);commit(b);
-  if(S.view==='size')toast(had?`${p.player} ${p.kit} اتباع`:`اتسجل — بس المخزن كان مكتوب فيه صفر`);
+  toast(had?`${p.player} ${p.kit} اتباع`:`اتسجل — بس المخزن كان مكتوب فيه صفر`);
 }
 function minus(s,p){
   const c=cnt(s,p.id);if(!c)return;const sl=salesOf(s,p.id),last=sl[sl.length-1];
@@ -2841,18 +2895,23 @@ function go(view,size){S.view=view;if(size)S.size=size;S.edit=false;render();scr
 $cats.addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b||b.dataset.cat===S.cat)return;S.cat=b.dataset.cat;LS.set('mafiaShop.cat',S.cat);go(PARENT[S.view]||S.view)});
 $tabs.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)go(b.dataset.tab)});
 $app.addEventListener('click',e=>{
+  const br=e.target.closest('[data-brand]');if(br){S.brand=br.dataset.brand;S.q='';$q.value='';return go('brand')}
   const o=e.target.closest('[data-open]');if(o)return go('size',o.dataset.open);
   const sh=e.target.closest('[data-short]');if(sh)return go('shortsize',sh.dataset.short);
   const st=e.target.closest('[data-stock]');if(st)return go('stocksize',st.dataset.stock);
   const g=e.target.closest('[data-go]');if(g)return go(g.dataset.go);
   const b=e.target.closest('[data-act]');if(!b)return;
-  const act=b.dataset.act,p=S.items.find(x=>x.id===b.dataset.id);
+  const act=b.dataset.act,p=S.items.find(x=>x.id===b.dataset.id),sz=b.dataset.size||S.size;
   if(act==='toggle-edit'){S.edit=!S.edit;render()}
   else if(act==='add')itemForm(null);
+  else if(act==='add-color')itemForm(null,S.brand);
+  else if(act==='b-plus'&&p)adjust(p,{[sz]:1});
+  else if(act==='b-minus'&&p){if(stk(sz,p.id)>0)adjust(p,{[sz]:-1});else toast('المخزن صفر')}
+  else if(act==='b-sell'&&p){if(!S.me){askName(true);return}sell(sz,p)}
   else if(act==='edit'&&p)itemForm(p);
   else if(act==='del'&&p)delForm(p);
   else if(act==='rename')renameForm(b.dataset.name);
-  else if(act==='sell'&&p){if(!S.me){askName(true);return}sell(S.size,p)}
+  else if(act==='sell'&&p){if(!S.me){askName(true);return}sell(sz,p)}
   else if(act==='minus'&&p)minus(S.size,p);
   else if(act==='restock'&&p)restockSheet(S.size,p);
   else if(act==='restock-size')openSheet(`<h4>اتورد كل نواقص مقاس ${S.size}؟</h4><p class="hint" style="margin-top:0">كل الأصناف الناقصة هتتشال من النواقص، وكمياتها هتتضاف للمخزن.</p><div class="actions"><button class="btn" data-cancel>إلغاء</button><button class="btn primary" data-m="ok">أيوه اتورد</button></div>`,()=>{closeSheet();restockSize(S.size)});
